@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b8b4a8fb33125842bf32ad9f842f5d6, type: 3}
+  m_Name: ScriptBTree
+  m_EditorClassIdentifier: 
+  _rootTree:
+    id: 
+    enable: 1
+    desc: "\u63CF\u8FF0\u4FE1\u606F\uFF0C\u8BF4\u660E\u8FD9\u4E2A\u95EE\u9898\u4E0D\u7B80\u5355\u54E6"
+    node:
+      rid: 208423998478877485
+    condition:
+      enable: 1
+      matchType: 0
+      conditions:
+      - matchType: 0
+        node:
+          rid: 208423998478877521
+        subEnable: 0
+        subConditions: []
+    subTrees:
+    - rid: 5545716237369344004
+  references:
+    version: 2
+    RefIds:
+    - rid: 208423998478877485
+      type: {class: Sequence_AllSuccessNode, ns: UFrame.InheriBT.Composite, asm: Assembly-CSharp}
+      data:
+        name: "\u987A\u5E8F\u6267\u884C\u5168\u90E8"
+    - rid: 208423998478877521
+      type: {class: RandomTimeCoolDownCondition, ns: UFrame.InheriBT.Condition, asm: Assembly-CSharp}
+      data:
+        name: "\u51B7\u53741~2\u79D2"
+        compareType: 0
+        coolTimeMin: 1
+        coolTimeMax: 2
+    - rid: 5545716237369344004
+      type: {class: TreeInfo, ns: UFrame.InheriBT, asm: Assembly-CSharp}
+      data:
+        id: af335c88-6c7c-4e92-b61c-7693d1c7d75c
+        enable: 1
+        desc: 
+        node:
+          rid: 5545716237369344005
+        condition:
+          enable: 0
+          matchType: 0
+          conditions: []
+        subTrees: []
+    - rid: 5545716237369344005
+      type: {class: BTreeNode, ns: UFrame.InheriBT.Actions, asm: Assembly-CSharp}
+      data:
+        name: BTreeNode
+        tree: {fileID: 11400000, guid: ff089c4f417cd8d4f91a3977aad47eae, type: 2}
+        _instanceTree: {fileID: 0}

@@ -2,8 +2,12 @@
 - clone from https://gitee.com/zouhunter/scriptable-behaviour-tree
 - copy right zouhunter@126.com
 
+## Scriptable Editor Supported
+![scriptable.png](Docs/scriptable.png)
+
+
 ## Graph Editor Supported
-![graph.png](Docs/graph.png)
+![graph.png](https://github.com/zouhunter/InheriBT/blob/main/Docs/graph.png)
 
 ## Variant Supported
 ![deepvariant.png](Docs/deepvariant.png)

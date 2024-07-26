@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dfc796db7a656974eafc1df2ee5fce8f, type: 3}
+  m_Name: SecondBVariantTree
+  m_EditorClassIdentifier: 
+  _rootTree:
+    id: 
+    enable: 0
+    desc: 
+    node:
+      rid: -2
+    condition:
+      enable: 0
+      matchType: 0
+      conditions: []
+    subTrees: []
+  baseTree: {fileID: 11400000, guid: 6112c0d3b5ac2e6479a388131daeae4e, type: 2}
+  modifys: []
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
