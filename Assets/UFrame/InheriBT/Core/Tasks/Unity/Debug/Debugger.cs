@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace UFrame.InheriBT.Actions
 {
-    [NodePath("文本日志")]
+    [NodePath("文本日志:{logType}")]
     public class Debugger : ActionNode
     {
         public LogType logType;

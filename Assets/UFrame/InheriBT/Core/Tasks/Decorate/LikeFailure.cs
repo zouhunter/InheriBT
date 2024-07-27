@@ -12,10 +12,11 @@ namespace UFrame.InheriBT.Decorates
     [AddComponentMenu("BehaviourTree/Decorate/LikeFailure")]
     public class LikeFailure : DecorateNode
     {
-        protected override Status OnUpdate()
+
+        protected override Status OnUpdate(TreeInfo info)
         {
-            var status = base.ExecuteChild();
-            if(status == Status.Success)
+            var status = base.ExecuteChild(info);
+            if (status == Status.Success)
             {
                 return Status.Failure;
             }

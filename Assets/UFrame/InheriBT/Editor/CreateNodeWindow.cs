@@ -8,6 +8,7 @@ using UnityEditor.Experimental.GraphView;
 using System;
 using System.Reflection;
 using System.Linq;
+using System.Text;
 
 namespace UFrame.InheriBT
 {
@@ -46,20 +47,20 @@ namespace UFrame.InheriBT
             CreateTargetTypes("Actions", typeof(ActionNode), tree, context);
             CreateTargetTypes("Composites", typeof(CompositeNode), tree, context);
             CreateTargetTypes("Decorators", typeof(DecorateNode), tree, context);
-            CreateFromTreeNodes(tree,context);
+            CreateFromTreeNodes(tree, context);
             CreateNewScriptSearch(tree, context);
             return tree;
         }
 
         private void CreateFromTreeNodes(List<SearchTreeEntry> tree, SearchWindowContext context)
         {
-            if(bTree != null)
+            if (bTree != null)
             {
                 var allNodes = new List<BaseNode>();
-                bTree.CollectNodesDeepth(bTree.rootTree,allNodes);
+                bTree.CollectNodesDeepth(bTree.rootTree, allNodes);
                 allNodes.RemoveAll(x => !baseType.IsAssignableFrom(x.GetType()));
                 var groups = allNodes.GroupBy(x => x.GetType().BaseType.Name).ToList();
-                if(groups.Count > 0)
+                if (groups.Count > 0)
                 {
                     tree.Add(new SearchTreeGroupEntry(new GUIContent("Internals")) { level = 1 });
                     foreach (var group in groups)
@@ -67,24 +68,36 @@ namespace UFrame.InheriBT
                         tree.Add(new SearchTreeGroupEntry(new GUIContent(group.Key)) { level = 2 });
                         foreach (var node in group)
                         {
+                            tree.Add(new SearchTreeGroupEntry(new GUIContent(node.name)) { level = 3 });
+
                             var copyNode = node;
-                            var action = new Action(() => { 
+                            var action = new Action(() =>
+                            {
                                 createNodeAction?.Invoke(copyNode);
                             });
-                            tree.Add(new SearchTreeEntry(new GUIContent(node.name)) { level = 3,userData= action });
+                            tree.Add(new SearchTreeEntry(new GUIContent("Reference")) { level = 4, userData = action });
+
+                            var cloneNode = System.Activator.CreateInstance(node.GetType()) as BaseNode;
+                            EditorJsonUtility.FromJsonOverwrite(EditorJsonUtility.ToJson(node), cloneNode);
+                            cloneNode.name = node.name + "(Clone)";
+                            var action2 = new Action(() =>
+                            {
+                                createNodeAction?.Invoke(cloneNode);
+                            });
+                            tree.Add(new SearchTreeEntry(new GUIContent("Clone")) { level = 4, userData = action2 });
                         }
                     }
                 }
             }
         }
 
-        private void CreateTargetTypes(string title,Type bType, List<SearchTreeEntry> tree, SearchWindowContext context)
+        private void CreateTargetTypes(string title, Type bType, List<SearchTreeEntry> tree, SearchWindowContext context)
         {
             if (!baseType.IsAssignableFrom(bType))
                 return;
 
             tree.Add(new SearchTreeGroupEntry(new GUIContent(title)) { level = 1 });
-            var types = TypeCache.GetTypesDerivedFrom(bType).Where(x=>!x.IsAbstract).ToList();
+            var types = TypeCache.GetTypesDerivedFrom(bType).Where(x => !x.IsAbstract).ToList();
             types.Sort((x, y) => string.Compare(x.Namespace + GetTypeName(x), y.Namespace + GetTypeName(y)));
             var entrySet = new HashSet<string>();
             foreach (var type in types)
@@ -92,9 +105,10 @@ namespace UFrame.InheriBT
                 CreateEntryFromNamespace(2, type, entrySet, tree, context);
             }
         }
-        private void CreateEntryFromNamespace(int startLevel,Type type, HashSet<string> entrySet, List<SearchTreeEntry> tree, SearchWindowContext context)
+
+        private void CreateEntryFromNamespace(int startLevel, Type type, HashSet<string> entrySet, List<SearchTreeEntry> tree, SearchWindowContext context)
         {
-            if (type.IsAbstract) 
+            if (type.IsAbstract)
                 return;
 
             var fullName = GetTypeName(type);
@@ -113,19 +127,127 @@ namespace UFrame.InheriBT
 
                 if (i == paths.Length - 1)
                 {
-                    tree.Add(new SearchTreeEntry(new GUIContent(pathItem))
-                    {
-                        level = i + startLevel,
-                        userData = new Action(() =>
-                        {
-                            CreateNode(type, context);
-                        })
-                    });
+                    CreateNodeArgEntry(tree, context, i + startLevel, pathItem, type);
                 }
                 else
                 {
                     tree.Add(new SearchTreeGroupEntry(new GUIContent(pathItem)) { level = i + startLevel });
                 }
+            }
+        }
+
+        static List<List<string>> GenerateAllCombinations(List<Dictionary<string, KeyValuePair<MemberInfo, object>>> listOfDicts)
+        {
+            List<List<string>> result = new List<List<string>>();
+            GenerateCombinations(listOfDicts, 0, new List<string>(), result);
+            return result;
+        }
+
+        static void GenerateCombinations(List<Dictionary<string, KeyValuePair<MemberInfo, object>>> listOfDicts, int index, List<string> current, List<List<string>> result)
+        {
+            if (index == listOfDicts.Count)
+            {
+                result.Add(new List<string>(current));
+                return;
+            }
+
+            foreach (var key in listOfDicts[index].Keys)
+            {
+                current.Add(key);
+                GenerateCombinations(listOfDicts, index + 1, current, result);
+                current.RemoveAt(current.Count - 1);
+            }
+        }
+
+        private void CreateNodeArgEntry(List<SearchTreeEntry> tree, SearchWindowContext context, int level, string pathItem, Type type)
+        {
+            var members = type.GetMembers(BindingFlags.GetField|BindingFlags.GetProperty|BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public);
+            List<Dictionary<string, KeyValuePair<MemberInfo, object>>> membersInfoMap = new();
+            foreach (var member in members)
+            {
+                Type fieldType = null;
+                if (member is FieldInfo fieldInfo)
+                {
+                    fieldType = fieldInfo.FieldType;
+                }
+                else if (member is PropertyInfo propInfo)
+                {
+                    fieldType = propInfo.PropertyType;
+                    if (propInfo.GetSetMethod() == null)
+                        continue;
+                }
+                else
+                {
+                    continue;
+                }
+
+                object[] defaluts = null;
+                var attr = member.GetCustomAttribute<PrimaryArgAttribute>();
+                if (attr != null)
+                {
+                    defaluts = attr.defaluts;
+                }
+                else if (fieldType.IsEnum)
+                {
+                    var enumValues = fieldType.GetEnumValues();
+                    defaluts = new object[enumValues.Length];
+                    for (int i = 0; i < enumValues.Length; i++)
+                    {
+                        defaluts[i] = enumValues.GetValue(i);
+                    }
+                }
+                if (defaluts != null)
+                {
+                    Dictionary<string, KeyValuePair<MemberInfo, object>> memberInfo = new();
+                    foreach (var item in defaluts)
+                    {
+                        memberInfo[$"{member.Name}={item}"] = new KeyValuePair<MemberInfo, object>(member, item);
+                    }
+                    membersInfoMap.Add(memberInfo);
+                }
+            }
+            if (membersInfoMap.Count > 0)
+            {
+                Dictionary<string, Dictionary<MemberInfo, object>> preloadArgDic = new Dictionary<string, Dictionary<MemberInfo, object>>();
+                var combinations = GenerateAllCombinations(membersInfoMap);
+                foreach (var combination in combinations)
+                {
+                    var key = string.Join("&", combination);
+                    if (!preloadArgDic.TryGetValue(key, out var infoMap))
+                    {
+                        infoMap = preloadArgDic[key] = new Dictionary<MemberInfo, object>();
+                    }
+                    for (int i = 0; i < combination.Count; i++)
+                    {
+                        var memInfo = membersInfoMap[i][combination[i]];
+                        infoMap[memInfo.Key] = memInfo.Value;
+                    }
+                }
+
+                tree.Add(new SearchTreeGroupEntry(new GUIContent(pathItem)) { level = level });
+                foreach (var item in preloadArgDic)
+                {
+                    var constratMembers = item.Value;
+                    tree.Add(new SearchTreeEntry(new GUIContent(item.Key))
+                    {
+                        level = level + 1,
+                        userData = new Action(() =>
+                        {
+                            CreateNode(type, context, constratMembers);
+                        })
+                    });
+                }
+            }
+            else
+            {
+                tree.Add(new SearchTreeEntry(new GUIContent(pathItem))
+                {
+                    level = level,
+                    userData = new Action(() =>
+                    {
+                        CreateNode(type, context);
+                    })
+                });
             }
         }
 
@@ -164,10 +286,31 @@ namespace UFrame.InheriBT
             return true;
         }
 
-        public void CreateNode(System.Type type, SearchWindowContext context)
+        public void CreateNode(System.Type type, SearchWindowContext context, Dictionary<MemberInfo, object> args = null)
         {
-            var node = System.Activator.CreateInstance(type) as BaseNode;
+            var node = Activator.CreateInstance(type) as BaseNode;
             node.name = GetTypeName(type);
+            if (args != null)
+            {
+                foreach (var item in args)
+                {
+                    var member = item.Key;
+                    var value = item.Value;
+                    if (member is FieldInfo fieldInfo)
+                    {
+                        fieldInfo.SetValue(node, value);
+                    }
+                    if (member is PropertyInfo propInfo)
+                    {
+                        propInfo.SetValue(node, value);
+                    }
+                    if (node.name.Contains($"{{{member.Name}}}"))
+                    {
+                        node.name = node.name.Replace($"{{{member.Name}}}", value.ToString());
+                    }
+                }
+
+            }
             createNodeAction?.Invoke(node);
         }
 
@@ -176,18 +319,60 @@ namespace UFrame.InheriBT
             var attribute = type.GetCustomAttribute<NodePathAttribute>();
             if (attribute != null)
             {
-                return attribute.desc;
+                return attribute.desc + $" ({type.Name})";
             }
             return type.Name;
         }
 
+        public void CreateScript(string content)
+        {
+            EditorApplication.ExecuteMenuItem("Assets/Create/C# Script");
+            EditorApplication.update = () =>
+            {
+                if (Selection.activeObject)
+                {
+                    var name = Selection.activeObject.name;
+                    var path = AssetDatabase.GetAssetPath(Selection.activeObject);
+                    content = content.Replace("$ClasName",name);
+                    System.IO.File.WriteAllText(path, content);
+                    EditorApplication.update = null;
+                    AssetDatabase.Refresh();
+                }
+            };
+        }
         public void CreateScript(TaskType type, SearchWindowContext context)
         {
-            //模板创建
-            Debug.LogError(type);
+            //模板可修改
+            var baseType = typeof(BaseNode);
+            switch (type)
+            {
+                case TaskType.Action:
+                    baseType = typeof(ActionNode);
+                    break;
+                case TaskType.Condition:
+                    baseType = typeof(ConditionNode);
+                    break;
+                case TaskType.Composite:
+                    baseType = typeof(CompositeNode);
+                    break;
+                case TaskType.Deractor:
+                    baseType = typeof(DecorateNode);
+                    break;
+                default:
+                    break;
+            }
+            var sb = new StringBuilder();
+            sb.AppendLine($"using {baseType.Namespace};");
+            sb.AppendLine("namespace Game");
+            sb.AppendLine("{");
+            sb.AppendLine($"    public class $ClasName : {baseType.Name}");
+            sb.AppendLine("    {");
+            sb.AppendLine("    }");
+            sb.AppendLine("}");
+            CreateScript(sb.ToString());
         }
 
-        public static void Show(Vector2 mousePosition, Action<BaseNode> source, Type baseType,BTree treeNow = null)
+        public static void Show(Vector2 mousePosition, Action<BaseNode> source, Type baseType, BTree treeNow = null)
         {
             Vector2 screenPoint = GUIUtility.GUIToScreenPoint(mousePosition);
             CreateNodeWindow searchWindowProvider = CreateInstance<CreateNodeWindow>();

@@ -1,6 +1,6 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
-
 using UnityEngine;
 
 namespace UFrame.InheriBT
@@ -10,29 +10,17 @@ namespace UFrame.InheriBT
     /// </summary>
     public abstract class ConditionNode : BaseNode
     {
-        //取反
-        public CompareType compareType;
-
         protected abstract bool CheckCondition();
 
         protected override Status OnUpdate()
         {
-            if(compareType == CompareType.ForceSuccess)
+            if (CheckCondition())
             {
                 return Status.Success;
             }
-            else if(compareType == CompareType.ForceFailure)
-            {
-                return Status.Failure;
-            }
-
-            if (CheckCondition())
-            {
-                return compareType == CompareType.Equal ? Status.Success : Status.Failure;
-            }
             else
             {
-                return compareType == CompareType.NotEqual ? Status.Success : Status.Failure;
+                return Status.Failure;
             }
         }
     }

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 using UnityEngine;
 
@@ -9,28 +10,16 @@ namespace UFrame.InheriBT
     {
         public virtual int maxChildCount { get => int.MaxValue; }
 
-        public int ChildCount => _childNodes != null ? _childNodes.Count :0;
-        private List<BaseNode> _childNodes;
-
         /// <summary>
-        /// set owner
+        /// 获取有效子树
         /// </summary>
-        /// <param name="owner"></param>
         /// <param name="info"></param>
-        public override void SetOwner(BTree owner, TreeInfo info)
+        /// <returns></returns>
+        public int GetChildCount(TreeInfo info)
         {
-            base.SetOwner(owner, info);
-            if (TreeInfo.subTrees != null && TreeInfo.subTrees != null)
-            {
-                _childNodes = new List<BaseNode>();
-                foreach (var treeInfo in TreeInfo.subTrees)
-                {
-                    if (treeInfo.enable)
-                    {
-                        _childNodes.Add(treeInfo.node);
-                    }
-                }
-            }
+            if (info.subTrees == null)
+                return 0;
+            return info.subTrees.Where(x => x.enable).Count();
         }
 
         /// <summary>
@@ -38,13 +27,17 @@ namespace UFrame.InheriBT
         /// </summary>
         /// <param name="index"></param>
         /// <returns></returns>
-        public virtual BaseNode GetChild(int index)
+        public virtual TreeInfo GetChild(TreeInfo info, int index)
         {
-            if (index < 0 || index >= ChildCount)
+            if (info.subTrees == null)
                 return null;
-            if(_childNodes != null && _childNodes.Count > index)
+            var id = -1;
+            foreach (TreeInfo child in info.subTrees)
             {
-                return _childNodes[index];
+                if (child.enable)
+                    id++;
+                if (id == index)
+                    return child;
             }
             return null;
         }

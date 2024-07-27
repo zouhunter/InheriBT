@@ -19,9 +19,10 @@ namespace UFrame.InheriBT.Decorates
 
         private float _coolTimer = 0;
 
-        protected override Status OnUpdate()
+
+        protected override Status OnUpdate(TreeInfo info)
         {
-            if(_coolTimer < _coolTime && _firstTimeCool)
+            if (_coolTimer < _coolTime && _firstTimeCool)
             {
                 _coolTimer = Time.time + _coolTime;
                 return Status.Running;
@@ -31,7 +32,7 @@ namespace UFrame.InheriBT.Decorates
                 return Status.Running;
             }
             _coolTimer = Time.time + _coolTime;
-            return base.ExecuteChild();
+            return base.ExecuteChild(info);
         }
     }
 }

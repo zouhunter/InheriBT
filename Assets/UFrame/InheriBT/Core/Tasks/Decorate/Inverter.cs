@@ -12,10 +12,11 @@ namespace UFrame.InheriBT.Decorates
     [AddComponentMenu("BehaviourTree/Decorate/Inverter")]
     public class Inverter : DecorateNode
     {
-        protected override Status OnUpdate()
+
+        protected override Status OnUpdate(TreeInfo info)
         {
-            var status = base.ExecuteChild();
-            if(status == Status.Failure)
+            var status = base.ExecuteChild(info);
+            if (status == Status.Failure)
             {
                 return Status.Success;
             }

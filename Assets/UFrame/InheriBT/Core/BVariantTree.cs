@@ -6,6 +6,7 @@
  *_*/
 
 using System.Collections.Generic;
+
 using UnityEngine;
 
 namespace UFrame.InheriBT
@@ -38,10 +39,11 @@ namespace UFrame.InheriBT
             ProcessModify(dic);
         }
 
-        public override TreeInfo FindTreeInfo(string id,bool deep = true)
+        public override TreeInfo FindTreeInfo(string id, bool deep = true)
         {
             var info = base.FindTreeInfo(id);
-            if (info == null && baseTree != null && deep) {
+            if (info == null && baseTree != null && deep)
+            {
                 info = baseTree.FindTreeInfo(id);
             }
             return info;
@@ -87,10 +89,29 @@ namespace UFrame.InheriBT
                     {
                         treeInfo.condition.conditions[i].subEnable = conditionModify.subEnable.value;
                     }
-                  
+
+                    if (conditionModify.state.enable)
+                    {
+                        treeInfo.condition.conditions[i].state = conditionModify.state.value;
+                    }
+
                     if (conditionModify.matchType.enable)
                     {
                         treeInfo.condition.conditions[i].matchType = conditionModify.matchType.value;
+                    }
+
+                    if (conditionModify.sub_conditions != null)
+                    {
+                        for (int j = 0; j < conditionModify.sub_conditions.Count && j < treeInfo.condition.conditions[i].subConditions.Count; j++)
+                        {
+                            var subModify = conditionModify.sub_conditions[j];
+                            if (subModify == null)
+                                continue;
+                            if (subModify.enable)
+                            {
+                                treeInfo.condition.conditions[i].subConditions[j].state = subModify.value;
+                            }
+                        }
                     }
                 }
             }

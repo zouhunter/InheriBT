@@ -10,11 +10,16 @@ namespace UFrame.InheriBT
         public string id;
         public bool enable;
         public string desc;
+        public Status status { get; set; }
         [SerializeReference]
         public BaseNode node;
         public ConditionInfo condition = new ConditionInfo();
         [SerializeReference]
         public List<TreeInfo> subTrees;
+        public TreeInfo()
+        {
+            id = System.Guid.NewGuid().ToString();
+        }
     }
 
     [Serializable]
@@ -28,9 +33,11 @@ namespace UFrame.InheriBT
     [Serializable]
     public class ConditionItem
     {
+        public Status status { get; set; }
         public MatchType matchType = MatchType.AllSuccess;
         [SerializeReference]
         public ConditionNode node;
+        public int state;
         public bool subEnable;
         public List<SubConditionItem> subConditions = new List<SubConditionItem>();
     }
@@ -38,6 +45,8 @@ namespace UFrame.InheriBT
     [Serializable]
     public class SubConditionItem
     {
+        public int state;
+        public Status status { get; set; }
         [SerializeReference]
         public ConditionNode node;
     }

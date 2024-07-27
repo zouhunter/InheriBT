@@ -1,4 +1,4 @@
-/*-*-* Copyright (c) mateai@wekoi
+/*-*-* Copyright (c) UFrame@wekoi
  * Author: zouhunter
  * Creation Date: 2024-07-24
  * Version: 1.0.0
@@ -6,13 +6,9 @@
  *_*/
 
 using UnityEngine;
-using System;
-using UFrame.InheriBT;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditorInternal;
-using UnityEngine.UIElements;
-using System.Reflection;
 
 namespace UFrame.InheriBT
 {
@@ -35,7 +31,7 @@ namespace UFrame.InheriBT
             _conditionList.onAddCallback = OnAddCondition;
             _conditionList.onRemoveCallback = OnDeleteCondition;
             _conditionList.elementHeightCallback = OnDrawConditonHight;
-            _conditionList.drawElementCallback = OnDrawCondtionElement;
+            _conditionList.drawElementCallback = OnDrawCondition;
         }
 
         public float GetHeight()
@@ -60,7 +56,7 @@ namespace UFrame.InheriBT
         private void OnDrawConditionHead(Rect rect)
         {
             var color = Color.yellow;
-            if (_treeInfo.node && _treeInfo.node.Status == Status.Success)
+            if (_treeInfo.node && _treeInfo.status == Status.Success)
                 color = Color.green;
 
             using (var c = new ColorScope(true, Color.yellow))
@@ -70,39 +66,57 @@ namespace UFrame.InheriBT
             _treeInfo.condition.matchType = (MatchType)EditorGUI.EnumPopup(matchRect, _treeInfo.condition.matchType, EditorStyles.linkLabel);
         }
 
-        private void OnDrawCondtionElement(Rect rect, int index, bool isActive, bool isFocused)
-        {
-            OnDrawCondition(rect, index);
-        }
-
-        private bool CheckConditionChanged(int index, out bool matchTypeGreen, out bool subEnableGreen)
+        private bool CheckConditionChanged(int index,out bool selfChanged,out bool matchTypeChanged)
         {
             var baseTreeInfo = TreeInfoInBase(_treeInfo);
-            bool green = false;
-            matchTypeGreen = false;
-            subEnableGreen = false;
+            bool changed = false;
+            matchTypeChanged = false;
+            selfChanged = false;
             if (_tree is BVariantTree && !EditorApplication.isPlaying && baseTreeInfo?.condition?.conditions != null && _treeInfo?.condition?.conditions != null)
             {
                 if (_treeInfo.condition.conditions.Count > index && baseTreeInfo.condition.conditions.Count > index)
                 {
                     if ((baseTreeInfo.condition.conditions[index].subEnable != _treeInfo.condition.conditions[index].subEnable))
                     {
-                        green = true;
-                        subEnableGreen = true;
+                        selfChanged = true;
+                        changed = true;
                     }
                     if (baseTreeInfo.condition.conditions[index].matchType != _treeInfo.condition.conditions[index].matchType)
                     {
-                        green = true;
-                        matchTypeGreen = true;
+                        matchTypeChanged = true;
+                        changed = true;
+                    }
+                    if (baseTreeInfo.condition.conditions[index].state != _treeInfo.condition.conditions[index].state)
+                    {
+                        selfChanged = true;
+                        changed = true;
                     }
                 }
                 else if (baseTreeInfo.condition.conditions.Count <= index && index != 0)
                 {
-                    green = true;
+                    changed = true;
                 }
             }
-            return green;
+            return changed;
         }
+
+
+        private bool CheckSubConditionChanged(int index, int subIndex)
+        {
+            var baseTreeInfo = TreeInfoInBase(_treeInfo);
+            bool changed = false;
+            if (_tree is BVariantTree && !EditorApplication.isPlaying && baseTreeInfo?.condition?.conditions != null && _treeInfo?.condition?.conditions != null)
+            {
+                var baseCondtions = baseTreeInfo?.condition?.conditions[index];
+                var condtions = _treeInfo?.condition?.conditions[index];
+                if (baseCondtions.subConditions.Count > subIndex && condtions.subConditions.Count > subIndex)
+                {
+                    changed = baseCondtions.subConditions[subIndex].state != condtions.subConditions[subIndex].state;
+                }
+            }
+            return changed;
+        }
+
 
         private float OnDrawConditonHight(int index)
         {
@@ -113,7 +127,7 @@ namespace UFrame.InheriBT
                 if (condition == null)
                     _treeInfo.condition.conditions[index] = condition = new ConditionItem();
 
-                if (condition.subEnable)
+                if (condition.subEnable && condition.state < 2)
                 {
                     height += EditorGUIUtility.singleLineHeight * 2.5f;
                     if (condition.subConditions != null && condition.subConditions.Count > 0)
@@ -125,29 +139,42 @@ namespace UFrame.InheriBT
             return height;
         }
 
-        private void OnDrawCondition(Rect rect, int index)
+        private void OnDrawCondition(Rect rect, int index, bool isActive, bool isFocused)
         {
             if (_treeInfo.condition.conditions == null || _treeInfo.condition.conditions.Count <= index)
                 return;
-            var green = CheckConditionChanged(index, out var matchTypeGreen, out var enableToggleGreen);
             var condition = _treeInfo.condition.conditions[index];
+            var inverseRect = new Rect(rect.x, rect.y, 20, EditorGUIUtility.singleLineHeight);
+            var normaIcon = EditorGUIUtility.IconContent("d_toggle_on_focus").image;
+            var inverseIcon = IconCacheUtil.GetTextureByGUID("dd3247368b7f1bc43baf81039a01f4ee");
+            var inValidIcon = EditorGUIUtility.IconContent("d_console.erroricon").image;
+            var conditionIcon = (condition.state == 0) ? normaIcon : (condition.state == 1) ? inverseIcon : inValidIcon;
+            if (GUI.Button(inverseRect, conditionIcon))
+                condition.state = (++condition.state) % 3;
+
+            var conditionVariantChanged = CheckConditionChanged(index,out var conditonSelfChanged,out var condtionMatchTypeChanged);
+
             if (condition == null)
                 condition = _treeInfo.condition.conditions[index] = new ConditionItem();
-            var objectRect = new Rect(rect.x, rect.y, rect.width - 30, EditorGUIUtility.singleLineHeight);
+            var objectRect = new Rect(rect.x + 25, rect.y, rect.width - 55, EditorGUIUtility.singleLineHeight);
             var enableRect = new Rect(rect.x + rect.width - 20, rect.y, 20, EditorGUIUtility.singleLineHeight);
-            using (var colorScope = new ColorScope(enableToggleGreen, Color.green))
-            {
-                TreeInfoDrawer.DrawCreateNodeContent(objectRect, condition.node, n =>
-                {
-                    RecordUndo("condition node changed!");
-                    condition.node = n;
-                }, _tree);
-                DrawNodeState(condition.node, objectRect);
 
-                condition.subEnable = EditorGUI.Toggle(enableRect, condition.subEnable, EditorStyles.radioButton);
+            using (var disableScope = new EditorGUI.DisabledScope(condition.state > 1))
+            {
+                using (var colorScope = new ColorScope(conditonSelfChanged, Color.green))
+                {
+                    TreeInfoDrawer.DrawCreateNodeContent(objectRect, condition.node, n =>
+                    {
+                        RecordUndo("condition node changed!");
+                        condition.node = n;
+                    }, _tree);
+                    DrawNodeState(condition.status, objectRect);
+                    condition.subEnable = EditorGUI.Toggle(enableRect, condition.subEnable, EditorStyles.radioButton);
+                }
             }
 
-            if (condition.subEnable)
+            var subConditionEnable = condition.subEnable && condition.state < 2;
+            if (subConditionEnable)
             {
                 var hashCode = condition.GetHashCode();
                 if (!_subConditionListMap.TryGetValue(hashCode, out var subConditionList))
@@ -155,20 +182,34 @@ namespace UFrame.InheriBT
                     if (condition.subConditions == null)
                         condition.subConditions = new List<SubConditionItem>();
                     subConditionList = _subConditionListMap[hashCode] = new ReorderableList(condition.subConditions, typeof(ConditionNode), true, true, true, true);
-                    //subConditionList.drawHeaderCallback = (subRect) => { EditorGUI.LabelField(subRect, "SubConditions"); };
                     subConditionList.headerHeight = 0;
                     subConditionList.drawElementCallback = (subRect, subIndex, subIsActive, subIsFocused) =>
                     {
                         var subNode = condition.subConditions[subIndex];
                         if (subNode == null)
                             subNode = new SubConditionItem();
-                        var subObjectRect = new Rect(subRect.x, subRect.y, subRect.width, EditorGUIUtility.singleLineHeight);
-                        TreeInfoDrawer.DrawCreateNodeContent(subObjectRect, subNode.node, n =>
+                        var subCondtionChanged = CheckSubConditionChanged(index, subIndex);
+
+                        var subInverseRect = new Rect(subRect.x, subRect.y, 20, EditorGUIUtility.singleLineHeight);
+                        var subConditionIcon = (subNode.state == 0) ? normaIcon : (subNode.state == 1) ? inverseIcon : inValidIcon;
+                        using(var colorGroup2 = new ColorScope(subCondtionChanged, Color.green))
                         {
-                            RecordUndo("condition sub node changed!");
-                            subNode.node = n;
-                        }, _tree);
-                        DrawNodeState(subNode.node, subObjectRect);
+                            if (GUI.Button(subInverseRect, subConditionIcon))
+                                subNode.state = (++subNode.state) % 3;
+
+                            using (var disableScope2 = new EditorGUI.DisabledGroupScope(subNode.state > 1))
+                            {
+                                var subObjectRect = new Rect(subRect.x + 25, subRect.y, subRect.width - 25, EditorGUIUtility.singleLineHeight);
+                                TreeInfoDrawer.DrawCreateNodeContent(subObjectRect, subNode.node, n =>
+                                {
+                                    RecordUndo("condition sub node changed!");
+                                    subNode.node = n;
+                                }, _tree);
+                                DrawNodeState(subNode.status, subObjectRect);
+                            }
+
+                        }
+
                         condition.subConditions[subIndex] = subNode;
                         var subMenuRect = new Rect(subRect.x - 100, subRect.y, 100, EditorGUIUtility.singleLineHeight);
                         if (subMenuRect.Contains(Event.current.mousePosition) && Event.current.type == EventType.MouseUp && Event.current.button == 1)
@@ -214,13 +255,10 @@ namespace UFrame.InheriBT
                         condition.subConditions.RemoveAt(subList.index);
                     };
                 }
-                using (var colorScope = new ColorScope(green, Color.green))
-                {
-                    subConditionList.DoList(new Rect(rect.x, rect.y + EditorGUIUtility.singleLineHeight, rect.width, subConditionList.GetHeight()));
-                }
+                subConditionList.DoList(new Rect(rect.x, rect.y + EditorGUIUtility.singleLineHeight, rect.width, subConditionList.GetHeight()));
             }
 
-            if (condition.subEnable)
+            if (subConditionEnable)
             {
                 var verticlOffset = EditorGUIUtility.singleLineHeight;
                 if (condition.subConditions != null && condition.subConditions.Count > 0)
@@ -231,7 +269,7 @@ namespace UFrame.InheriBT
                 if (condition.subConditions != null && condition.subConditions.Count > 0)
                 {
                     var matchTypeRect = new Rect(rect.x + 20, rect.y + verticlOffset, 75, EditorGUIUtility.singleLineHeight);
-                    using(var colorScope = new ColorScope(matchTypeGreen, new Color(0, 1, 0, 0.8f)))
+                    using (var colorScope = new ColorScope(condtionMatchTypeChanged, new Color(0, 1, 0, 0.8f)))
                     {
                         condition.matchType = (MatchType)EditorGUI.EnumPopup(matchTypeRect, condition.matchType, EditorStyles.linkLabel);
                     }
@@ -262,27 +300,24 @@ namespace UFrame.InheriBT
             }
         }
 
-        private void DrawNodeState(BaseNode node, Rect rect)
+        private void DrawNodeState(Status status, Rect rect)
         {
             var color = Color.gray;
             var show = false;
-            if (node)
+            if (status == Status.Success)
             {
-                if (node.Status == Status.Success)
-                {
-                    show = true;
-                    color = Color.green;
-                }
-                else if (node.Status == Status.Failure)
-                {
-                    show = true;
-                    color = Color.red;
-                }
-                else if (node.Status == Status.Running)
-                {
-                    show = true;
-                    color = Color.yellow;
-                }
+                show = true;
+                color = Color.green;
+            }
+            else if (status == Status.Failure)
+            {
+                show = true;
+                color = Color.red;
+            }
+            else if (status == Status.Running)
+            {
+                show = true;
+                color = Color.yellow;
             }
             if (show)
             {

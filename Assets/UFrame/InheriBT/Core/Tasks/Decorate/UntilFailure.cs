@@ -12,9 +12,9 @@ namespace UFrame.InheriBT.Decorates
     [AddComponentMenu("BehaviourTree/Decorate/UntilFailure")]
     public class UntilFailure : DecorateNode
     {
-        protected override Status OnUpdate()
+        protected override Status OnUpdate(TreeInfo info)
         {
-            var childResult = base.ExecuteChild();
+            var childResult = base.ExecuteChild(info);
             if (childResult == Status.Failure)
             {
                 return Status.Failure;

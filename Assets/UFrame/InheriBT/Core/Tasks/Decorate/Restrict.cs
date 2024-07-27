@@ -25,15 +25,15 @@ namespace UFrame.InheriBT.Decorates
         /// <returns></returns>
         protected bool GetAccess()
         {
-            if(executingTask.Value.Contains(TreeInfo))
-            {
-                return true;
-            }
-            if (executingTask.Value.Count < maxAccessCount.Value)
-            {
-                executingTask.Value.Add(TreeInfo);
-                return true;
-            }
+            //if(executingTask.Value.Contains(TreeInfo))
+            //{
+            //    return true;
+            //}
+            //if (executingTask.Value.Count < maxAccessCount.Value)
+            //{
+            //    executingTask.Value.Add(TreeInfo);
+            //    return true;
+            //}
             return false;
         }
 
@@ -45,12 +45,12 @@ namespace UFrame.InheriBT.Decorates
         {
             if(GetAccess())
             {
-                var childResult = base.ExecuteChild();
-                if(childResult == Status.Success || childResult == Status.Failure)
-                {
-                    executingTask.Value.Remove(TreeInfo);
-                }
-                return childResult;
+                //var childResult = base.ExecuteChild();
+                //if(childResult == Status.Success || childResult == Status.Failure)
+                //{
+                //    executingTask.Value.Remove(TreeInfo);
+                //}
+                //return childResult;
             }
             return Status.Running;
         }

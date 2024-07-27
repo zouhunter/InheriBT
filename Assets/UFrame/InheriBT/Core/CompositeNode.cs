@@ -12,6 +12,5 @@ namespace UFrame.InheriBT
     [DisallowMultipleComponent]
     public abstract class CompositeNode : ParentNode
     {
-        public abstract MatchType abortType { get; }
     }
 }

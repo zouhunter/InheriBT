@@ -242,7 +242,7 @@ namespace UFrame.InheriBT
         private void OnDrawNodesHeader(Rect rect)
         {
             EditorGUI.LabelField(rect, "Nodes");
-            var searchRect = new Rect(rect.x + rect.width - 100, rect.y, 80, rect.height);
+            var searchRect = new Rect(rect.x + rect.width - 200, rect.y, 180, rect.height);
             using (var chage = new EditorGUI.ChangeCheckScope())
             {
                 _matchNodeText = EditorGUI.TextField(searchRect, _matchNodeText);

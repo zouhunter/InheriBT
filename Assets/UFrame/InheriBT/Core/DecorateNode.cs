@@ -4,7 +4,6 @@
  * Version: 1.0.0
  * Description: 装饰器
  *_*/
-
 namespace UFrame.InheriBT
 {
     /// <summary>
@@ -14,12 +13,12 @@ namespace UFrame.InheriBT
     {
         public override int maxChildCount => 1;
 
-        protected virtual Status ExecuteChild()
+        protected virtual Status ExecuteChild(TreeInfo info)
         {
-            var childNode = GetChild(0);
+            var childNode = GetChild(info,0);
             if (childNode != null)
             {
-               return childNode.Execute();
+               return childNode.node.Execute(childNode);
             }
             return Status.Inactive;
         }

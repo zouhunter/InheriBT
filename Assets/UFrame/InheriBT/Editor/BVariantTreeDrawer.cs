@@ -8,9 +8,6 @@
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
-using System;
-using System.Threading;
-
 namespace UFrame.InheriBT
 {
     [DisallowMultipleComponent]
@@ -92,7 +89,7 @@ namespace UFrame.InheriBT
             _bVariantTree.modifys = _bVariantTree.modifys ?? new List<TreeInfoModify>();
             _bVariantTree.modifys.Clear();
             _bVariantTree.rootTree = new TreeInfo();
-            if(_baseTree is BVariantTree bvt)
+            if (_baseTree is BVariantTree bvt)
                 bvt.BuildRootTree();
             CollectTreeInfo(rootTree);
             EditorUtility.SetDirty(_bVariantTree);
@@ -111,7 +108,7 @@ namespace UFrame.InheriBT
                 }
             }
             var baseInfo = _baseTree?.FindTreeInfo(info.id);
-            if(baseInfo == null)
+            if (baseInfo == null)
             {
                 Debug.LogError(_baseTree + " not exists:" + info.id);
                 return;
@@ -124,7 +121,7 @@ namespace UFrame.InheriBT
                 _bVariantTree.modifys.Add(modify);
             }
         }
-        public static bool CheckNodeInfoEqual(BaseNode node1,BaseNode node2)
+        public static bool CheckNodeInfoEqual(BaseNode node1, BaseNode node2)
         {
             return JsonUtility.ToJson(node1) != JsonUtility.ToJson(node2);
         }
@@ -154,8 +151,9 @@ namespace UFrame.InheriBT
             }
             if (baseInfo.condition.conditions != null && treeInfo.condition.conditions != null)
             {
-                modify.condition_modifys = new List<ConditionInfoModify>();
-                for (int i = 0; i < baseInfo.condition.conditions.Count; i++)
+                bool needConditionModify = false;
+                var conditionModifys = new List<ConditionInfoModify>();
+                for (int i = 0; i < baseInfo.condition.conditions.Count && i< treeInfo.condition.conditions.Count; i++)
                 {
                     var subCondition = treeInfo.condition.conditions[i];
                     var baseSubCondition = baseInfo.condition.conditions[i];
@@ -163,13 +161,18 @@ namespace UFrame.InheriBT
                     var subModify = CreateSubConditionModify(baseSubCondition, subCondition);
                     if (subModify != null)
                     {
-                        modify.condition_modifys.Add(subModify);
+                        conditionModifys.Add(subModify);
                         changed = true;
+                        needConditionModify = true;
                     }
                     else
                     {
-                        modify.condition_modifys.Add(null);
+                        conditionModifys.Add(null);
                     }
+                }
+                if (needConditionModify)
+                {
+                    modify.condition_modifys = conditionModifys;
                 }
             }
             return changed ? modify : null;
@@ -188,6 +191,29 @@ namespace UFrame.InheriBT
             {
                 modify.matchType = new InfoModify<MatchType>(subCondition.matchType);
                 changed = true;
+            }
+            if (baseSubCondition.subConditions != null && baseSubCondition.subConditions.Count > 0
+                && subCondition.subConditions != null && subCondition.subConditions.Count > 0)
+            {
+                bool needSubModify = false;
+                List<InfoModify<int>> stateModifys = new List<InfoModify<int>>();
+                for (int i = 0; i < baseSubCondition.subConditions.Count && i < subCondition.subConditions.Count; i++) {
+                    if (baseSubCondition.subConditions[i].state != subCondition.subConditions[i].state)
+                    {
+                        var subMmodify = new InfoModify<int>(subCondition.subConditions[i].state);
+                        stateModifys.Add(subMmodify);
+                        needSubModify = true;
+                        changed = true;
+                    }
+                    else
+                    {
+                        stateModifys.Add(null);
+                    }
+                }
+                if(needSubModify)
+                {
+                    modify.sub_conditions = stateModifys;
+                }
             }
             return changed ? modify : null;
         }

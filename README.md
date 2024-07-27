@@ -1,5 +1,5 @@
 # InheriBT 
-- clone from https://gitee.com/zouhunter/scriptable-behaviour-tree
+- variant of https://gitee.com/zouhunter/scriptable-behaviour-tree
 - copy right zouhunter@126.com
 
 ## Scriptable Editor Supported

@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+
 using UnityEngine;
 
 namespace UFrame.InheriBT
@@ -38,8 +39,9 @@ namespace UFrame.InheriBT
     public class ConditionInfoModify
     {
         public InfoModify<bool> subEnable;
+        public InfoModify<int> state;
         public InfoModify<MatchType> matchType;
+        public List<InfoModify<int>> sub_conditions;
     }
-
 }
 

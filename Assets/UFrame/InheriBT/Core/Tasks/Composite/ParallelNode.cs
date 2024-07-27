@@ -13,20 +13,21 @@ namespace UFrame.InheriBT.Composite
     {
         [SerializeField]
         private MatchType _abortType;
-        public override MatchType abortType => _abortType;
+        public MatchType abortType => _abortType;
 
-        protected override Status OnUpdate()
+        protected override Status OnUpdate(TreeInfo info)
         {
-            if (ChildCount == 0)
+            var childCount = GetChildCount(info);
+            if (childCount == 0)
                 return Status.Inactive;
 
             var resultStatus = Status.Failure;
             var successCount = 0;
             var failureCount = 0;
-            for (int i = 0; i < ChildCount; i++)
+            for (int i = 0; i < childCount; i++)
             {
-                var child = GetChild(i);
-                var childStatus = child.Execute();
+                var child = GetChild(info, i);
+                var childStatus = child.node?.Execute(child);
                 if (childStatus == Status.Inactive)
                     continue;
 
@@ -54,9 +55,9 @@ namespace UFrame.InheriBT.Composite
                         break;
                 }
             }
-            if (abortType == MatchType.AllSuccess && successCount == ChildCount)
+            if (abortType == MatchType.AllSuccess && successCount == GetChildCount(info))
                 resultStatus = Status.Success;
-            else if(abortType == MatchType.AllFailure && failureCount == ChildCount)
+            else if(abortType == MatchType.AllFailure && failureCount == GetChildCount(info))
                 resultStatus = Status.Success;
             return resultStatus;
         }

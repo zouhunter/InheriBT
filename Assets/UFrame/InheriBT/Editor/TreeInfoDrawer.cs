@@ -137,17 +137,20 @@ namespace UFrame.InheriBT
 
         private float OnSubTreeElementHeight(int index)
         {
+            var elementHeight = 4;
             if (_treeInfo.subTrees.Count > index)
             {
                 var info = _treeInfo.subTrees[index];
                 var drawer = GetSubDrawer(info);
-                return drawer.GetHeight();
+                return drawer.GetHeight() + elementHeight;
             }
-            return 0;
+            return elementHeight;
         }
 
         private void OnDrawSubTreeElement(Rect rect, int index, bool isActive, bool isFocused)
         {
+            var innerRect = new Rect(rect.x+2,rect.y+2,rect.width -4,rect.height -4);
+            GUI.Box(innerRect,GUIContent.none);
             if (_treeInfo.subTrees.Count > index && _subDrawers.Count > index)
             {
                 var info = _treeInfo.subTrees[index];
@@ -159,7 +162,7 @@ namespace UFrame.InheriBT
                     bool green = !EditorApplication.isPlaying && _treeDrawer is BVariantTreeDrawer && CheckTreeInfoChangedSelf(baseInfo, info);
                     using (var colorScope = new ColorScope(green, new Color(0, 1, 0, 0.8f)))
                     {
-                        drawer.OnInspectorGUI(rect, _deepth + (1 + index));
+                        drawer.OnInspectorGUI(innerRect, _deepth + (1 + index));
                     }
                 }
             }
@@ -235,7 +238,7 @@ namespace UFrame.InheriBT
                         RecordUndo("node changed!");
                         _treeInfo.node = n;
                     }, _treeDrawer.target as BTree);
-                    DrawNodeState(_treeInfo.node, nodeRect);
+                    DrawNodeState(_treeInfo, nodeRect);
                 }
 
 
@@ -267,13 +270,13 @@ namespace UFrame.InheriBT
 
                     if (_needChild)
                     {
-                        DrawLineLink(_treeInfo.node, fullRect, yOffset);
+                        DrawLineLink(_treeInfo, fullRect, yOffset);
                         var subTreeRect = new Rect(position.x, yOffset, position.width, _subTreeList.GetHeight());
                         _subTreeList.DoList(subTreeRect);
                     }
                     else if (_needCondition && _treeInfo.condition.conditions.Count > 0)
                     {
-                        DrawWireBox(_treeInfo.node, new Rect(fullRect.x, fullRect.y, fullRect.width, fullRect.height));
+                        DrawWireBox(_treeInfo, new Rect(fullRect.x, fullRect.y, fullRect.width, fullRect.height));
                     }
 
                 }
@@ -343,7 +346,7 @@ namespace UFrame.InheriBT
             using (var disableScope = new EditorGUI.DisabledScope(tree is BVariantTree))
             {
                 var createRect = new Rect(rect.x + rect.width - 20, rect.y, 20, rect.height);
-                if (createTouched || GUI.Button(createRect, EditorGUIUtility.IconContent("buttonpulldown@2x").image))
+                if (createTouched || GUI.Button(createRect,"",EditorStyles.popup))
                 {
                     CreateNodeWindow.Show(Event.current.mousePosition, (node) =>
                     {
@@ -353,23 +356,23 @@ namespace UFrame.InheriBT
             }
         }
 
-        private void DrawNodeState(BaseNode node, Rect rect)
+        private void DrawNodeState(TreeInfo node, Rect rect)
         {
             var color = Color.gray;
             var show = false;
-            if (node)
+            if (node != null)
             {
-                if (node.Status == Status.Success)
+                if (node.status == Status.Success)
                 {
                     show = true;
                     color = Color.green;
                 }
-                else if (node.Status == Status.Failure)
+                else if (node.status == Status.Failure)
                 {
                     show = true;
                     color = Color.red;
                 }
-                else if (node.Status == Status.Running)
+                else if (node.status == Status.Running)
                 {
                     show = true;
                     color = Color.yellow;
@@ -384,7 +387,7 @@ namespace UFrame.InheriBT
             }
         }
 
-        private void DrawWireBox(BaseNode node, Rect rect)
+        private void DrawWireBox(TreeInfo node, Rect rect)
         {
             rect = new Rect(rect.x, rect.y + 2, rect.width, rect.height - 4);
             var leftRect = new Rect(rect.x, rect.y, 2, rect.height);
@@ -392,13 +395,13 @@ namespace UFrame.InheriBT
             var topRect = new Rect(rect.x, rect.y, rect.width, 2);
             var bottomRect = new Rect(rect.x, rect.y + rect.height - 2, rect.width, 2);
             var color = Color.gray;
-            if (node)
+            if (node != null)
             {
-                if (node.Status == Status.Success)
+                if (node.status == Status.Success)
                     color = Color.green;
-                else if (node.Status == Status.Failure)
+                else if (node.status == Status.Failure)
                     color = Color.red;
-                else if (node.Status == Status.Running)
+                else if (node.status == Status.Running)
                     color = Color.yellow;
             }
 
@@ -412,7 +415,7 @@ namespace UFrame.InheriBT
             }
         }
 
-        private void DrawLineLink(BaseNode node, Rect rect, float yOffset)
+        private void DrawLineLink(TreeInfo node, Rect rect, float yOffset)
         {
             yOffset = yOffset - rect.y;
             float height = (rect.height - yOffset);
@@ -420,13 +423,13 @@ namespace UFrame.InheriBT
             var verticllLine = new Rect(rect.x + 5, rect.y + 15, 3, rect.height * percent);
             var horizontallLine = new Rect(verticllLine.x, verticllLine.yMax, 25, 3);
             var color = Color.gray;
-            if (node)
+            if (node != null)
             {
-                if (node.Status == Status.Success)
+                if (node.status == Status.Success)
                     color = Color.green;
-                else if (node.Status == Status.Failure)
+                else if (node.status == Status.Failure)
                     color = Color.red;
-                else if (node.Status == Status.Running)
+                else if (node.status == Status.Running)
                     color = Color.yellow;
             }
             color.a = 0.5f;

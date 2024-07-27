@@ -11,7 +11,7 @@ using UnityEngine;
 namespace UFrame.InheriBT
 {
     [System.Serializable]
-    public class BTree : ScriptableObject, IBaseNode, IVariableProvider
+    public class BTree : ScriptableObject, IVariableProvider
     {
         [SerializeField]
         protected TreeInfo _rootTree;
@@ -23,9 +23,6 @@ namespace UFrame.InheriBT
         public bool TreeStarted => _treeStarted;
         private Dictionary<Type, IEnumerable<FieldInfo>> _fieldMap = new Dictionary<Type, IEnumerable<FieldInfo>>();
         private bool _treeStarted;
-
-        public Status Status { get; private set; }
-
         public BTree Owner { get; internal set; }
 
         #region Variables
@@ -153,6 +150,10 @@ namespace UFrame.InheriBT
         #endregion
 
         #region TreeTraversal
+        public BTree CreateInstance()
+        {
+            return Instantiate(this);
+        }
 
         public void CollectToDic(TreeInfo info, Dictionary<string, TreeInfo> infoDic)
         {
@@ -213,7 +214,7 @@ namespace UFrame.InheriBT
         {
             if (rootTree != null && rootTree.node != null)
             {
-                rootTree.node.SetOwner(this, rootTree);
+                SetOwnerDeepth(rootTree, this);
                 _treeStarted = true;
                 return true;
             }
@@ -239,7 +240,7 @@ namespace UFrame.InheriBT
         {
             if (rootTree != null && _treeStarted)
             {
-                rootTree.node.SetOwner(this, rootTree);
+                SetOwnerDeepth(rootTree,this);
                 return true;
             }
             else
@@ -248,12 +249,40 @@ namespace UFrame.InheriBT
             }
         }
 
+        public void SetOwnerDeepth(TreeInfo info,BTree owner)
+        {
+            info.node?.SetOwner(owner);
+            info.status = Status.Inactive;
+            if (info.condition.enable && info.condition.conditions != null && info.node == this)
+            {
+                foreach (var condition in info.condition.conditions)
+                {
+                    condition.status = Status.Inactive;
+                    condition.node?.SetOwner(owner);
+                    condition.subConditions?.ForEach(subNode =>
+                    {
+                        subNode.status = Status.Inactive;
+                        subNode?.node?.SetOwner(owner);
+                    });
+                }
+            }
+            if (info.subTrees != null && info.subTrees != null)
+            {
+                foreach (var subInfo in info.subTrees)
+                {
+                    if (subInfo.enable)
+                    {
+                        SetOwnerDeepth(subInfo, owner);
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// 刷新
         /// </summary>
         public virtual Status Tick()
         {
-            Status = Status.Inactive;
             if (rootTree == null || rootTree.node == null || rootTree.enable == false)
             {
                 if (rootTree == null)
@@ -262,27 +291,32 @@ namespace UFrame.InheriBT
                     Debug.LogError("BTree rootTree.node == null");
                 if (!rootTree.enable)
                     Debug.LogError("BTree rootTree.enable == false");
-                return Status;
+                return Status.Inactive;
             }
-            Status = OnUpdate();
-            return Status;
+            rootTree.status = OnUpdate();
+            return rootTree.status;
         }
 
         internal void OnReset()
         {
             if (rootTree != null && rootTree.node != null)
             {
-                rootTree.node.SetOwner(Owner, rootTree);
-                rootTree.node.ClearStatus();
+                SetOwnerDeepth(rootTree, this);
             }
         }
 
         internal Status OnUpdate()
         {
-            return rootTree.node.Execute();
+            return rootTree.node.Execute(rootTree);
         }
 
-        public virtual bool CheckConditions(MatchType matchType, List<SubConditionItem> conditions)
+        /// <summary>
+        /// 嵌套节点检查
+        /// </summary>
+        /// <param name="matchType"></param>
+        /// <param name="conditions"></param>
+        /// <returns></returns>
+        public virtual bool CheckConditions(TreeInfo treeInfo,MatchType matchType, List<SubConditionItem> conditions)
         {
             if (conditions != null && conditions.Count > 0)
             {
@@ -291,35 +325,36 @@ namespace UFrame.InheriBT
 
                 foreach (var conditionNode in conditions)
                 {
-                    if (conditionNode != null && conditionNode.node)
+                    if (conditionNode != null && conditionNode.node && conditionNode.state < 2)
                         validCount++;
                     else
                         continue;
 
-                    var result = conditionNode?.node?.Execute();
+                    conditionNode.status = conditionNode.node.Execute(treeInfo);
+                    var result = conditionNode.status == (conditionNode.state == 1 ? Status.Success:Status.Failure);
 #if UNITY_EDITOR
                     Debug.Log("check sub condition:" + conditionNode.node.name + " ," + result);
 #endif
                     switch (matchType)
                     {
                         case MatchType.AnySuccess:
-                            if (result == Status.Success)
+                            if (result)
                                 return true;
                             break;
                         case MatchType.AnyFailure:
-                            if (result == Status.Failure)
+                            if (!result)
                                 return true;
                             break;
                         case MatchType.AllSuccess:
-                            if (result == Status.Success)
+                            if (result)
                                 matchCount++;
-                            else if (result == Status.Failure)
+                            else
                                 return false;
                             break;
                         case MatchType.AllFailure:
-                            if (result == Status.Failure)
+                            if (!result)
                                 matchCount++;
-                            else if (result == Status.Success)
+                            else
                                 return false;
                             break;
                         default:
@@ -338,58 +373,52 @@ namespace UFrame.InheriBT
         /// </summary>
         /// <param name="info"></param>
         /// <returns></returns>
-        public virtual bool CheckConditions(ConditionInfo conditionInfo)
+        public virtual bool CheckConditions(TreeInfo treeInfo)
         {
+            var conditionInfo = treeInfo.condition;
             if (conditionInfo.enable && conditionInfo.conditions.Count > 0)
             {
                 int matchCount = 0;
                 int validCount = 0;
 
-                foreach (var subConditionInfo in conditionInfo.conditions)
+                foreach (var condition in conditionInfo.conditions)
                 {
-                    if (subConditionInfo != null && subConditionInfo.node != null)
+                    if (condition != null && condition.node != null && condition.state < 2)
                         validCount++;
                     else
                         continue;
 
-                    var checkResult = CheckConditions(subConditionInfo.matchType, subConditionInfo.subConditions);
+                    bool checkResult = true;
+                    if (condition.subEnable)
+                        checkResult = CheckConditions(treeInfo,condition.matchType, condition.subConditions);
+
+                    condition.status = condition.node.Execute(treeInfo);
                     if (checkResult)
-                    {
-                        checkResult = subConditionInfo.node.Execute() == Status.Success;
-#if UNITY_EDITOR
-                        Debug.Log("checking condition:" + subConditionInfo.node.name + "," + checkResult + "," + conditionInfo.matchType);
-#endif
-                    }
+                        checkResult = condition.status == (condition.state == 1 ? Status.Failure : Status.Success);
+
+                    Debug.Log("checking condition:" + condition.node.name + "," + checkResult + "," + conditionInfo.matchType);
                     switch (conditionInfo.matchType)
                     {
                         case MatchType.AllSuccess:
                             if (checkResult)
                                 matchCount++;
                             else
-                            {
                                 return false;
-                            }
                             break;
                         case MatchType.AllFailure:
                             if (!checkResult)
                                 matchCount++;
                             else
-                            {
                                 return false;
-                            }
                             break;
                         case MatchType.AnySuccess:
                             if (checkResult)
-                            {
                                 return true;
-                            }
                             matchCount = -1;
                             break;
                         case MatchType.AnyFailure:
                             if (!checkResult)
-                            {
                                 return true;
-                            }
                             matchCount = -1;
                             break;
                     }
@@ -398,7 +427,6 @@ namespace UFrame.InheriBT
             }
             return true;
         }
-
         #endregion
 
 

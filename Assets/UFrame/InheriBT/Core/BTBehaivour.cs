@@ -31,7 +31,7 @@ namespace UFrame.InheriBT
 
         protected virtual void Awake()
         {
-            _btInstance = Instantiate(_bt);
+            _btInstance = _bt.CreateInstance();
         }
 
         protected virtual void OnEnable()

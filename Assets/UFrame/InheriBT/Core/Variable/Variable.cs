@@ -1,7 +1,7 @@
 //using System;
 //using System.Diagnostics;
 
-//namespace MateAI.ScriptableBT
+//namespace UFrame.ScriptableBT
 //{
 //    public abstract class Variable
 //    {

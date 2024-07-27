@@ -20,10 +20,10 @@ namespace UFrame.InheriBT.Decorates
             Failure,
         }
 
-        protected override Status OnUpdate()
+        protected override Status OnUpdate(TreeInfo info)
         {
-            var status = base.ExecuteChild();
-            if(status == Status.Failure && _abortType == AbortType.Failure)
+            var status = base.ExecuteChild(info);
+            if (status == Status.Failure && _abortType == AbortType.Failure)
             {
                 return Status.Success;
             }

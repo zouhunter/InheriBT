@@ -13,7 +13,7 @@ namespace UFrame.InheriBT.Composite
     {
         [SerializeField]
         private MatchType _abortType;
-        public override MatchType abortType => _abortType;
+        public MatchType abortType => _abortType;
 
 
         public int limitCount = 1;
@@ -21,12 +21,6 @@ namespace UFrame.InheriBT.Composite
         private int _matchCount;
         private int[] _randomIndexs;
         private System.Random _rand;
-
-        public override BaseNode GetChild(int index)
-        {
-            var realIndex = _randomIndexs[index];
-            return base.GetChild(realIndex);
-        }
 
         public void Shuffle(int[] array)
         {
@@ -44,15 +38,16 @@ namespace UFrame.InheriBT.Composite
             }
         }
 
-        protected override Status OnUpdate()
+        protected override Status OnUpdate(TreeInfo info)
         {
-            if (ChildCount == 0 || limitCount == 0)
+            var childCount = GetChildCount(info);
+            if (childCount == 0 || limitCount == 0)
                 return Status.Inactive;
 
             _matchCount = 0;
-            var calcuteCount = limitCount < 0 ? ChildCount : Mathf.Min(limitCount, ChildCount);
-            if(_randomIndexs == null || _randomIndexs.Length != calcuteCount)
-            { 
+            var calcuteCount = limitCount < 0 ? childCount : Mathf.Min(limitCount, childCount);
+            if (_randomIndexs == null || _randomIndexs.Length != calcuteCount)
+            {
                 _randomIndexs = new int[calcuteCount];
                 for (int i = 0; i < _randomIndexs.Length; i++)
                     _randomIndexs[i] = i;
@@ -60,8 +55,8 @@ namespace UFrame.InheriBT.Composite
             Shuffle(_randomIndexs);
             for (int i = 0; i < calcuteCount; i++)
             {
-                var child = GetChild(i);
-                var childStatus = child?.Execute() ?? Status.Inactive;
+                var child = GetChild(info,i);
+                var childStatus = child.node?.Execute(child) ?? Status.Inactive;
 
                 switch (childStatus)
                 {

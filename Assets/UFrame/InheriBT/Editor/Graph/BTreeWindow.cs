@@ -419,8 +419,10 @@ namespace UFrame.InheriBT
                     if (drawer != null)
                     {
                         var labelWidth = EditorGUIUtility.labelWidth;
+                        EditorGUIUtility.labelWidth = 80;
                         rect.height = EditorGUI.GetPropertyHeight(drawer, true);
                         EditorGUI.PropertyField(rect, drawer, GUIContent.none, true);
+                        EditorGUIUtility.labelWidth = labelWidth;
                         rect.y += rect.height;
                     }
                 }

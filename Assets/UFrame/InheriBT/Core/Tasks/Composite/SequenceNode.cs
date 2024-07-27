@@ -14,23 +14,23 @@ namespace UFrame.InheriBT.Composite
     {
         [SerializeField]
         private MatchType _abortType;
-        public override MatchType abortType => _abortType;
+        public MatchType abortType => _abortType;
 
-        protected override Status OnUpdate()
+        protected override Status OnUpdate(TreeInfo info)
         {
-            if (ChildCount == 0)
+            if (GetChildCount(info) == 0)
                 return Status.Success;
 
             switch (abortType)
             {
                 case MatchType.AllSuccess:
-                    return CheckAllSuccess();
+                    return CheckAllSuccess(info);
                 case MatchType.AllFailure:
-                    return CheckAllFailure();
+                    return CheckAllFailure(info);
                 case MatchType.AnySuccess:
-                    return CheckAnySuccess();
+                    return CheckAnySuccess(info);
                 case MatchType.AnyFailure:
-                    return CheckAnyFailure();
+                    return CheckAnyFailure(info);
             }
             return Status.Failure;
         }
@@ -39,12 +39,12 @@ namespace UFrame.InheriBT.Composite
         /// 检查全部成功
         /// </summary>
         /// <returns></returns>
-        private Status CheckAllSuccess()
+        private Status CheckAllSuccess(TreeInfo info)
         {
-            for (int i = 0; i < ChildCount; i++)
+            for (int i = 0; i < GetChildCount(info); i++)
             {
-                var child = GetChild(i);
-                var childStatus = child?.Execute() ?? Status.Inactive;
+                var child = GetChild(info, i);
+                var childStatus = child.node?.Execute(child) ?? Status.Inactive;
                 if (childStatus == Status.Running)
                     return Status.Running;
                 if(childStatus == Status.Failure)
@@ -56,12 +56,12 @@ namespace UFrame.InheriBT.Composite
         /// 检查任意成功
         /// </summary>
         /// <returns></returns>
-        private Status CheckAnySuccess()
+        private Status CheckAnySuccess(TreeInfo info)
         {
-            for (int i = 0; i < ChildCount; i++)
+            for (int i = 0; i < GetChildCount(info); i++)
             {
-                var child = GetChild(i);
-                var childStatus = child?.Execute() ?? Status.Inactive;
+                var child = GetChild(info, i);
+                var childStatus = child.node?.Execute(child) ?? Status.Inactive;
                 if (childStatus == Status.Running)
                     return Status.Running;
                 if (childStatus == Status.Success)
@@ -73,12 +73,12 @@ namespace UFrame.InheriBT.Composite
         /// 检查全部失败
         /// </summary>
         /// <returns></returns>
-        private Status CheckAllFailure()
+        private Status CheckAllFailure(TreeInfo info)
         {
-            for (int i = 0; i < ChildCount; i++)
+            for (int i = 0; i < GetChildCount(info); i++)
             {
-                var child = GetChild(i);
-                var childStatus = child?.Execute() ?? Status.Inactive;
+                var child = GetChild(info, i);
+                var childStatus = child.node?.Execute(child) ?? Status.Inactive;
                 if (childStatus == Status.Running)
                     return Status.Running;
                 if (childStatus == Status.Success)
@@ -90,12 +90,12 @@ namespace UFrame.InheriBT.Composite
         /// 检查任意失败
         /// </summary>
         /// <returns></returns>
-        private Status CheckAnyFailure()
+        private Status CheckAnyFailure(TreeInfo info)
         {
-            for (int i = 0; i < ChildCount; i++)
+            for (int i = 0; i < GetChildCount(info); i++)
             {
-                var child = GetChild(i);
-                var childStatus = child?.Execute() ?? Status.Inactive;
+                var child = GetChild(info, i);
+                var childStatus = child.node?.Execute(child) ?? Status.Inactive;
                 if (childStatus == Status.Running)
                     return Status.Running;
                 if (childStatus == Status.Failure)

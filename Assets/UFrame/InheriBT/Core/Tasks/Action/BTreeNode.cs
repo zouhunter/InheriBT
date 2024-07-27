@@ -1,4 +1,4 @@
-/*-*-* Copyright (c) webxr@zht
+/*-*-* Copyright (c) uframe@zht
  * Author: zouhunter
  * Creation Date: 2024-03-29
  * Version: 1.0.0
@@ -18,13 +18,13 @@ namespace UFrame.InheriBT.Actions
         [SerializeField]
         private BTree _instanceTree;
 
-        public override void SetOwner(BTree owner, TreeInfo info)
+        public override void SetOwner(BTree owner)
         {
             if (tree)
                 _instanceTree = UnityEngine.Object.Instantiate(tree);
             if (_instanceTree)
-                _instanceTree.Owner = owner;
-            base.SetOwner(owner, info);
+                _instanceTree.SetOwnerDeepth(_instanceTree.rootTree, owner);
+            base.SetOwner(owner);
         }
 
         protected override void OnReset()
@@ -35,7 +35,7 @@ namespace UFrame.InheriBT.Actions
 
         protected override Status OnUpdate()
         {
-            return _instanceTree?.Tick()??Status.Failure;
+            return _instanceTree?.Tick() ?? Status.Failure;
         }
     }
 }

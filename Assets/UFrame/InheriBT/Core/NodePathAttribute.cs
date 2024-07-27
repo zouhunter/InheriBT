@@ -18,5 +18,15 @@ namespace UFrame {
             this.desc = desc;
         }
     }
+
+    [AttributeUsage(AttributeTargets.Field|AttributeTargets.Property, Inherited = true, AllowMultiple = false)]
+    public class PrimaryArgAttribute : Attribute
+    {
+        public object[] defaluts;
+        public PrimaryArgAttribute(params object[] defalut)
+        {
+            this.defaluts = defalut;
+        }
+    }
 }
 

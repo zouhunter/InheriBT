@@ -12,9 +12,10 @@ namespace UFrame.InheriBT.Condition
     [NodePath("冷却随机时间条件")]
     public class RandomTimeCoolDownCondition : ConditionNode
     {
+        [PrimaryArg(1)]
         public float coolTimeMin;
+        [PrimaryArg(3,5)]
         public float coolTimeMax;
-
         private float _timer;
         private float _coolTime;
 

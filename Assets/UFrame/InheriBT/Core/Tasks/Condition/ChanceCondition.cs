@@ -14,16 +14,16 @@ namespace UFrame.InheriBT.Condition
     {
         public Ref<float> percent;
         public Ref<int> randomSeed;
-        protected override void OnStart()
+        protected override void OnReset()
         {
-            base.OnStart();
-            if(randomSeed.Value != 0)
+            base.OnReset();
+            if (randomSeed.Value != 0)
                 Random.InitState(randomSeed.Value);
         }
 
         protected override bool CheckCondition()
         {
-            if(Random.Range(0,1) < percent.Value)
+            if(Random.Range(0f,1f) < percent.Value)
             {
                 return true;
             }

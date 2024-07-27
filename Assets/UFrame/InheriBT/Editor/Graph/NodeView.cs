@@ -160,7 +160,7 @@ namespace UFrame.InheriBT
                         RecordUndo("node changed!");
                         _info.node = n;
                     }, _tree);
-                    DrawNodeState(_info.node,nodeRect);
+                    DrawNodeState(_info.status,nodeRect);
                 }
                 var conditionEnableRect = new Rect(nodeRect.x + nodeRect.width + 10, nodeRect.y, 20, 20);
                 _info.condition.enable = EditorGUI.Toggle(conditionEnableRect, _info.condition.enable, EditorStyles.radioButton);
@@ -202,7 +202,7 @@ namespace UFrame.InheriBT
             if (_parentInfo != null)
             {
                 RecordUndo("delete child!");
-                _info.subTrees.ForEach(sub =>
+                _info.subTrees?.ForEach(sub =>
                 {
                     _parentInfo.subTrees.Add(sub);
                 });
@@ -297,27 +297,24 @@ namespace UFrame.InheriBT
         }
 
 
-        private void DrawNodeState(BaseNode node, Rect rect)
+        private void DrawNodeState(Status status, Rect rect)
         {
             var color = Color.gray;
             var show = false;
-            if (node)
+            if (status == Status.Success)
             {
-                if (node.Status == Status.Success)
-                {
-                    show = true;
-                    color = Color.green;
-                }
-                else if (node.Status == Status.Failure)
-                {
-                    show = true;
-                    color = Color.red;
-                }
-                else if (node.Status == Status.Running)
-                {
-                    show = true;
-                    color = Color.yellow;
-                }
+                show = true;
+                color = Color.green;
+            }
+            else if (status == Status.Failure)
+            {
+                show = true;
+                color = Color.red;
+            }
+            else if (status == Status.Running)
+            {
+                show = true;
+                color = Color.yellow;
             }
             if (show)
             {

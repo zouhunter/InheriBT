@@ -1,20 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Runtime.Serialization.Formatters.Binary;
 
 using UnityEngine;
 
 namespace UFrame.InheriBT
 {
-    public abstract class BaseNode :IDisposable
+    public abstract class BaseNode : IDisposable
     {
         private BTree _owner;
         [HideInInspector]
         public string name;
-        private TreeInfo _treeInfo;
         public BTree Owner => _owner;
-        public TreeInfo TreeInfo => _treeInfo;
-        public Status Status { get; protected set; }
         public virtual int Priority => 0;
 
         private bool _started;
@@ -23,29 +23,9 @@ namespace UFrame.InheriBT
 
         public static implicit operator bool(BaseNode instance) => instance != null;
 
-        public virtual void SetOwner(BTree owner, TreeInfo info)
+        public virtual void SetOwner(BTree owner)
         {
             _owner = owner;
-            _treeInfo = info;
-            Status = Status.Inactive;
-            if (info.condition.enable && info.condition.conditions != null && info.node == this)
-            {
-                foreach (var condition in info.condition.conditions)
-                {
-                    condition.node?.SetOwner(owner, info);
-                    condition.subConditions?.ForEach(subNode => subNode?.node?.SetOwner(owner, info));
-                }
-            }
-            if (info.subTrees != null && info.subTrees != null)
-            {
-                foreach (var subInfo in info.subTrees)
-                {
-                    if (subInfo.enable)
-                    {
-                        subInfo.node?.SetOwner(owner, subInfo);
-                    }
-                }
-            }
             _started = false;
             BindingRefVars(GetRefVars());
             OnReset();
@@ -53,53 +33,52 @@ namespace UFrame.InheriBT
 
         internal virtual void ClearStatus()
         {
-            Status = Status.Inactive;
-            if (_treeInfo == null)
-                return;
-            var info = _treeInfo;
-            if (info.condition.enable && info.condition.conditions != null && info.node == this)
-            {
-                foreach (var condition in info.condition.conditions)
-                {
-                    condition.node?.ClearStatus();
-                    condition.subConditions?.ForEach(subNode => subNode?.node?.ClearStatus());
-                }
-            }
-            if (info.subTrees != null && info.subTrees != null)
-            {
-                foreach (var subInfo in info.subTrees)
-                {
-                    if (subInfo.enable)
-                    {
-                        subInfo.node?.ClearStatus();
-                    }
-                }
-            }
+            //TreeInfo.status = Status.Inactive;
+            //if (this._treeInfo == null || _treeInfo.node != this)
+            //    return;
+            //if (_treeInfo.condition.enable && _treeInfo.condition.conditions != null)
+            //{
+            //    foreach (var condition in _treeInfo.condition.conditions)
+            //    {
+            //        condition.node?.ClearStatus();
+            //        condition.subConditions?.ForEach(subNode => subNode?.node?.ClearStatus());
+            //    }
+            //}
+            //if (_treeInfo.subTrees != null && _treeInfo.subTrees != null)
+            //{
+            //    foreach (var subInfo in _treeInfo.subTrees)
+            //    {
+            //        if (subInfo.enable)
+            //        {
+            //            subInfo.node?.ClearStatus();
+            //        }
+            //    }
+            //}
         }
 
         public virtual void Dispose()
         {
-            if (_treeInfo != null)
-            {
-                if (_treeInfo.condition.enable && _treeInfo.condition.conditions != null && _treeInfo.node == this)
-                {
-                    foreach (var condition in _treeInfo.condition.conditions)
-                    {
-                        condition.node?.Dispose();
-                        condition.subConditions?.ForEach(subNode => subNode?.node?.Dispose());
-                    }
-                }
-                if (_treeInfo.subTrees != null && _treeInfo.subTrees != null)
-                {
-                    foreach (var subInfo in TreeInfo.subTrees)
-                    {
-                        if (subInfo.enable)
-                        {
-                            subInfo.node?.Dispose();
-                        }
-                    }
-                }
-            }
+            //if (this._treeInfo == null || _treeInfo.node != this)
+            //    return;
+
+            //if (_treeInfo.condition.enable && _treeInfo.condition.conditions != null && _treeInfo.node == this)
+            //{
+            //    foreach (var condition in _treeInfo.condition.conditions)
+            //    {
+            //        condition.node?.Dispose();
+            //        condition.subConditions?.ForEach(subNode => subNode?.node?.Dispose());
+            //    }
+            //}
+            //if (_treeInfo.subTrees != null && _treeInfo.subTrees != null)
+            //{
+            //    foreach (var subInfo in _treeInfo.subTrees)
+            //    {
+            //        if (subInfo.enable)
+            //        {
+            //            subInfo.node?.Dispose();
+            //        }
+            //    }
+            //}
         }
 
         protected virtual IEnumerable<IRef> GetRefVars()
@@ -134,33 +113,41 @@ namespace UFrame.InheriBT
             Debug.Assert(Owner != null, "owner is empty！");
         }
 
-        protected abstract Status OnUpdate();
-
-        public virtual Status Execute()
+        protected virtual Status OnUpdate(TreeInfo info)
         {
-            if (TreeInfo == null)
+            return OnUpdate();
+        }
+
+        protected virtual Status OnUpdate()
+        {
+            return Status.Inactive;
+        }
+
+        public virtual Status Execute(TreeInfo info)
+        {
+            if (info == null)
             {
-                Status = Status.Inactive;
-                Debug.LogError(_treeInfo.node.name + ",TreeInfo == null");
-                return Status;
+                info.status = Status.Inactive;
+                Debug.LogError(info.node.name + ",TreeInfo == null");
+                return info.status;
             }
 
             _conditionFaliure = false;
-            if (TreeInfo.node == this)
+            if (info.node == this && info.condition != null && info.condition.enable)
             {
-                if(!Owner.CheckConditions(TreeInfo.condition))
+                if (!Owner.CheckConditions(info))
                 {
-                    Status = Status.Failure;
+                    info.status = Status.Failure;
 #if UNITY_EDITOR
-                    Debug.Log("conditon failed:" + _treeInfo.node.name);
+                    Debug.Log("condition failed:" + info.node.name);
 #endif
                     _conditionFaliure = true;
-                    return Status;
+                    return info.status;
                 }
                 else
                 {
 #if UNITY_EDITOR
-                    Debug.Log("conditon success:" + _treeInfo.node.name);
+                    Debug.Log("condition success:" + info.node.name);
 #endif
                 }
             }
@@ -171,19 +158,14 @@ namespace UFrame.InheriBT
                 OnStart();
             }
 
-            Status = OnUpdate();
+            info.status = OnUpdate(info);
 
-            if (Status != Status.Running)
+            if (info.status != Status.Running)
             {
                 _started = false;
                 OnEnd();
             }
-            return Status;
+            return info.status;
         }
-    }
-
-    public interface IBaseNode
-    {
-        Status Status { get; }
     }
 }
